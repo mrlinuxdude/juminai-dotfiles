@@ -23,7 +23,8 @@ DOCK_LIST = [
     "transmission"
 ]
 
-def list_installed_apps():
+
+def installed_apps():
     app_info = Gio.AppInfo
     app_infos = app_info.get_all()
 
@@ -60,14 +61,14 @@ def get_themed_icon(icon_name):
     if icon_info is not None:
         return icon_info.get_filename()
 
+
 def list_dock_apps():
-    app_list = list_installed_apps()
+    app_list = installed_apps()
     dock_apps_list = []
 
     for app in app_list:
         if app["name"].lower() in DOCK_LIST:
             dock_apps_list.append(app)
-
     return dock_apps_list
 
 
@@ -75,16 +76,15 @@ def get_cache():
     if os.path.exists(cache_file):
         with open(cache_file, "r") as file:
             return json.load(file)
-
-    app_list = list_installed_apps()
-    dock_apps = list_dock_apps()
-    update_cache({"apps": app_list, "dock_apps": dock_apps})
-    return {"apps": app_list, "dock_apps": dock_apps}
-
-
-def update_cache(app_list):
-    with open(cache_file, "w") as file:
-        json.dump(app_list, file, indent=2)
+    else:
+        full_list = {
+            "apps": installed_apps(), 
+            "dock_apps": list_dock_apps()
+        }
+        
+        with open(cache_file, "w") as file:
+            json.dump(full_list, file, indent=2)
+        return full_list
 
 
 def filter_entries(entries, query):
@@ -109,7 +109,9 @@ if __name__ == "__main__":
     entries = get_cache()
     
     if query is not None:
-        filtered = filter_entries(entries, query)
-        update_eww({"apps": filtered, "dock_apps": entries["dock_apps"]})
+        update_eww({
+            "apps":filter_entries(entries, query), 
+            "dock_apps": entries["dock_apps"]
+        })
     else:
         update_eww(entries)
