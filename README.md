@@ -4,6 +4,11 @@
 - **Compositor:** Hyprland
 - **Terminal:** foot
 - **Widgets:** eww
+- **Theme:** [mountain](https://github.com/mountain-theme/Mountain)
+- **Fonts:**
+  * **Icons:** Font Awesome 6 Pro
+  * **UI:** San Francisco
+  * **Terminal:** custom Iosevka
 
 ##
 
