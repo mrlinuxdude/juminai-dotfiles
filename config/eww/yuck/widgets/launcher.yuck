@@ -13,9 +13,9 @@
       (box :orientation "v" :halign "start" :space-evenly false :spacing 5
         (label :text {app.name} :class "name" :halign "start")
         (label
-          :visible {app.comment != "null"}
+          :visible {app.description != "null"}
           :class "comment"
-          :text {app.comment}  
+          :text {app.description}  
           :halign "start"
           :wrap true
           :xalign 0

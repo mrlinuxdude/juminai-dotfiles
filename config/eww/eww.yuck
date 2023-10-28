@@ -3,13 +3,13 @@
 (defvar dock_hovered  false)
 (defvar dock_rev      true)
 
-(deflisten mpris      `scripts/mpris.py`)
 (deflisten  volume    `scripts/volume`)
 (deflisten  details   `scripts/details`)
 (deflisten  network   `scripts/network`)
 (deflisten  hyprland  `scripts/hyprland.py`)
 (deflisten  weather   `scripts/weather.py`)
 (deflisten  positions `scripts/positions.py`)
+(deflisten  mpris     `scripts/mpris.py`)
 (deflisten  apps      `scripts/apps.py`)
   
 (deflisten  notifications

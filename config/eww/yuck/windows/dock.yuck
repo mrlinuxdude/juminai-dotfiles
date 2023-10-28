@@ -13,7 +13,7 @@
         (button :class "container ${dock_hovered ? "hovered" : ""}")
         (box :class "foot" :valign "end")
         (box :halign "center" :valign "end" :spacing 20 :space-evenly false
-          (for app in {apps.preferred}
+          (for app in {apps.dock_apps}
             (dock_app :app app)
           )
         )

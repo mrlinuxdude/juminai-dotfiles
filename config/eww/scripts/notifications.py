@@ -32,7 +32,7 @@ class NotificationDaemon(dbus.service.Object):
         self.active_popups = {}
 
     @dbus.service.method("org.freedesktop.Notifications", in_signature="susssasa{sv}i", out_signature="u")
-    def Notify(self, app_name, replaces_id, app_icon, summary,  body, actions, hints, expire_timeout,):
+    def Notify(self, app_name, replaces_id, app_icon, summary, body, actions, hints, expire_timeout,):
 
         if int(replaces_id) != 0:
             id = int(replaces_id)
@@ -51,27 +51,28 @@ class NotificationDaemon(dbus.service.Object):
         for i in range(0, len(actions), 2):
             action_pair = [str(actions[i]), str(actions[i + 1])]
             action_pairs.append(action_pair)
+            
+        if app_icon.strip():
+            if os.path.isfile(app_icon) or app_icon.startswith("file://"):
+                icon = app_icon
+            else:
+                icon = self.get_gtk_icon(app_icon)
+        else:
+            icon = None
+
+        if "image-data" in hints:
+            self.save_img_byte(hints["image-data"], details["image"])
+            icon = f"{cache_dir}/{details['id']}.png"
 
         details = {
             "id": id,
             "app": app_name or None,
+            "image": icon,
             "summary": self.clean_text(summary) or None,
             "body": self.clean_text(body) or None,
             "time": datetime.datetime.now().strftime("%H:%M"),
             "actions": action_pairs,
         }
-
-        if app_icon.strip():
-            if os.path.isfile(app_icon) or app_icon.startswith("file://"):
-                details["image"] = app_icon
-            else:
-                details["image"] = self.get_gtk_icon(app_icon)
-        else:
-            details["image"] = None
-
-        if "image-data" in hints:
-            details["image"] = f"{cache_dir}/{details['id']}.png"
-            self.save_img_byte(hints["image-data"], details["image"])
 
         self.save_notification(details)
         if not self.dnd:
@@ -175,6 +176,7 @@ class NotificationDaemon(dbus.service.Object):
         output_json = json.dumps(data, indent=2)
         with open(log_file, "w") as log:
             log.write(output_json)
+
         subprocess.run(["eww", "update", f"notifications={output_json}"])
 
     def read_log_file(self):

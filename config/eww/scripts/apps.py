@@ -1,20 +1,18 @@
 #!/usr/bin/env python
-# github @ juminai
+# juminai @ github
 
-import glob
-import sys
-import os
 import json
+import os
+import sys
 import subprocess
 import gi
-from configparser import ConfigParser
 
 gi.require_version("Gtk", "3.0")
+from gi.repository import Gio, Gtk
 
-from gi.repository import Gtk
+cache_file = os.path.expandvars("$XDG_CACHE_HOME/eww/apps.json")
 
-cache_file = os.path.join(os.path.expandvars("$XDG_CACHE_HOME/eww"), "apps.json")
-PREFERRED_APPS = [
+DOCK_LIST = [
     "spotify",
     "discord",
     "foot",
@@ -25,70 +23,82 @@ PREFERRED_APPS = [
     "transmission"
 ]
 
-def get_gtk_icon(icon_name):
+def list_installed_apps():
+    app_info = Gio.AppInfo
+    app_infos = app_info.get_all()
+
+    app_list = []
+    
+    for app_info in app_infos:
+        get_icon = app_info.get_icon()
+        
+        if get_icon:
+            if get_icon.get_names():
+                icon_name = get_icon.get_names()[0]
+                icon_location = get_themed_icon(icon_name)
+            else:
+                None
+        else:
+            icon_location = None
+        
+        if app_info.should_show():
+            app_dict = {
+                "name": app_info.get_display_name(),
+                "icon": icon_location,
+                "description": app_info.get_description(),
+                "desktop": app_info.get_id()
+            }
+            
+            app_list.append(app_dict)
+    return app_list
+
+
+def get_themed_icon(icon_name):
     theme = Gtk.IconTheme.get_default()
     icon_info = theme.lookup_icon(icon_name, 128, 0)
 
     if icon_info is not None:
         return icon_info.get_filename()
 
-def get_desktop_entries(file_path):
-    parser = ConfigParser()
-    parser.read(file_path)
+def list_dock_apps():
+    app_list = list_installed_apps()
+    dock_apps_list = []
 
-    if parser.getboolean("Desktop Entry", "NoDisplay", fallback=False):
-        return None  # Skip entries with NoDisplay=true
+    for app in app_list:
+        if app["name"].lower() in DOCK_LIST:
+            dock_apps_list.append(app)
 
-    app_name = parser.get("Desktop Entry", "Name")
-    icon_path = get_gtk_icon(parser.get("Desktop Entry", "Icon", fallback=None))
-    comment = parser.get("Desktop Entry", "Comment", fallback=None)
+    return dock_apps_list
 
-    entry = {
-        "name": app_name,
-        "icon": icon_path,
-        "comment": comment,
-        "desktop": os.path.basename(file_path),
-    }
-    return entry
 
-def update_cache(all_apps, preferred_apps):
-    data = {"apps": all_apps, "preferred": preferred_apps}
-    with open(cache_file, "w") as file:
-        json.dump(data, file, indent=2)
-
-def get_cached_entries():
+def get_cache():
     if os.path.exists(cache_file):
         with open(cache_file, "r") as file:
-            try:
-                return json.load(file)
-            except json.JSONDecodeError:
-                pass
+            return json.load(file)
 
-    all_apps = []
-    preferred_apps = []
+    app_list = list_installed_apps()
+    dock_apps = list_dock_apps()
+    update_cache({"apps": app_list, "dock_apps": dock_apps})
+    return {"apps": app_list, "dock_apps": dock_apps}
 
-    desktop_files = glob.glob(os.path.join("/usr/share/applications", "*.desktop"))
 
-    for file_path in desktop_files:
-        entry = get_desktop_entries(file_path)
-        if entry is not None:
-            all_apps.append(entry)
-            if entry["name"].lower() in PREFERRED_APPS:
-                preferred_apps.append(entry)
+def update_cache(app_list):
+    with open(cache_file, "w") as file:
+        json.dump(app_list, file, indent=2)
 
-    update_cache(all_apps, preferred_apps)
-    return {"apps": all_apps, "preferred": preferred_apps}
 
 def filter_entries(entries, query):
     filtered_data = [
         entry for entry in entries["apps"]
         if query.lower() in entry["name"].lower()
-        or (entry["comment"] and query.lower() in entry["comment"].lower())
+        or (entry["description"] and query.lower() in entry["description"].lower())
     ]
     return filtered_data
 
+
 def update_eww(entries):
     subprocess.run(["eww", "update", "apps={}".format(json.dumps(entries))])
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 2 and sys.argv[1] == "--query":
@@ -96,10 +106,10 @@ if __name__ == "__main__":
     else:
         query = None
 
-    entries = get_cached_entries()
-
+    entries = get_cache()
+    
     if query is not None:
         filtered = filter_entries(entries, query)
-        update_eww({"apps": filtered, "preferred": entries["preferred"]})
+        update_eww({"apps": filtered, "dock_apps": entries["dock_apps"]})
     else:
         update_eww(entries)
